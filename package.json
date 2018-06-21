@@ -1,0 +1,25 @@
+{
+  "name": "gitlab-stats",
+  "version": "1.0.0",
+  "description": "Snyk CLI tool to extract number of active contributors on a Gitlab instance.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "gitlab",
+    "snyk",
+    "active",
+    "contributor",
+    "contributors"
+  ],
+  "author": "antoine@snyk.io",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.17.1",
+    "chalk": "^2.3.0",
+    "commander": "^2.12.2",
+    "figlet": "^1.2.0",
+    "moment": "^2.22.2"
+  }
+}
