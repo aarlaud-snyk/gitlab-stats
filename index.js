@@ -50,10 +50,20 @@ const filterActiveMembers = (token, apiurl, filterActiveMembers) => {
           let userData = await getDataFromGitlabAPI(apiurl+'/users/'+value.id+'/events?action=pushed&after='+cutOffDate, config);
           let commit_count = 0;
           for(var i=0; i<userData.data.length; i++){
-            if(userData.data[i].push_data.commit_count > 0){
+            if(userData.data[i].push_data && userData.data[i].push_data.commit_count && userData.data[i].push_data.commit_count > 0){
               commit_count++;
             }
           }
+          var totalPages = userData.headers['x-total-pages'];
+          for(var j=2; j<=totalPages; j++){
+            userData = await getDataFromGitlabAPI(apiurl+'/users/'+value.id+'/events?action=pushed&after='+cutOffDate+'&page='+j, config);
+            for(var k=0; k<userData.data.length; k++){
+              if(userData.data[i].push_data && userData.data[i].push_data.commit_count && userData.data[k].push_data.commit_count > 0){
+                commit_count++;
+              }
+            }
+          }
+
           if(commit_count > 0){
               filteredMembersList.push({"name": key, "id": value.id, "username": value.username, "number of commits": commit_count, "groups": value.groups });
           }
@@ -71,20 +81,36 @@ const filterActiveMembers = (token, apiurl, filterActiveMembers) => {
 
 }
 
-const getGitlabGroupList = (token, apiurl) => {
-  return new Promise((resolve, reject) => {
+async function getGitlabGroupList (token, apiurl) {
+  // return new Promise((resolve, reject) => {
     var config = {
       headers: {'Private-Token': token}
     };
 
-    getDataFromGitlabAPI(apiurl+'/groups?all_available=true', config)
-    .then((data) => {
-      resolve(data);
-    })
-    .catch((error) => {
-      reject(error);
-    });
-  });
+    var groupData = [];
+
+    var data = await getDataFromGitlabAPI(apiurl+'/groups?all_available=true', config);
+    groupData.push(...data.data);
+    var totalPages = data.headers['x-total-pages'];
+
+    for(var i=2; i<=totalPages; i++){
+      data = await getDataFromGitlabAPI(apiurl+'/groups?all_available=true&page='+i, config);
+      groupData.push(...data.data);
+    }
+
+    return groupData;
+
+
+    // getDataFromGitlabAPI(apiurl+'/groups?all_available=true', config)
+    // .then((data) => {
+    //   // console.log(data.headers['x-page']);
+    //   // console.log(data.headers['x-total-pages']);
+    //   resolve(data);
+    // })
+    // .catch((error) => {
+    //   reject(error);
+    // });
+  //});
 }
 
 async function getGitlabGroupsMembers(token, apiurl, groups) {
@@ -94,13 +120,22 @@ async function getGitlabGroupsMembers(token, apiurl, groups) {
     };
 
     var users = [];
-
+    console.log(chalk.blue("Extracting members of groups"));
     for(var i=0; i<groups.length;i++){
+      console.log("Extracting members of "+groups[i].name);
 
       var data = await getDataFromGitlabAPI(apiurl+'/groups/'+groups[i].id+'/members', config);
       // .then((data) => {
         for(var j=0; j<data.data.length; j++){
           users.push({"id":data.data[j].id, "name": data.data[j].name, "username":data.data[j].username, "group":groups[i].name});
+        }
+        var totalPages = data.headers['x-total-pages'];
+
+        for(var k=2; k<=totalPages; k++){
+          data = await getDataFromGitlabAPI(apiurl+'/groups/'+groups[i].id+'/members&page='+k, config);
+          for(var j=0; j<data.data.length; j++){
+            users.push({"id":data.data[j].id, "name": data.data[j].name, "username":data.data[j].username, "group":groups[i].name});
+          }
         }
 
 
@@ -179,15 +214,16 @@ program
 
         calculateCutOffDate();
 
-        console.log(chalk.blue("\nListing groups the account"));
+        console.log(chalk.blue("\nListing groups that the token has access to and public groups"));
         getGitlabGroupList(options.token, options.apiurl)
         .then((data) => {
+
           var groups = [];
-          data.data.forEach((item) => {
+          data.forEach((item) => {
               //console.log(item.full_path);
               groups.push({"name":item.full_path, "id":item.id});
           });
-          console.log(chalk.red('==> '+data.data.length + ' groups'));
+          console.log(chalk.red('==> '+data.length + ' groups'));
           Object.entries(groups).forEach(
               ([key, value]) => console.log(value.name)
           );
