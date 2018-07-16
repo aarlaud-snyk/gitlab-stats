@@ -58,7 +58,7 @@ const filterActiveMembers = (token, apiurl, filterActiveMembers) => {
           for(var j=2; j<=totalPages; j++){
             userData = await getDataFromGitlabAPI(apiurl+'/users/'+value.id+'/events?action=pushed&after='+cutOffDate+'&page='+j, config);
             for(var k=0; k<userData.data.length; k++){
-              if(userData.data[i].push_data && userData.data[i].push_data.commit_count && userData.data[k].push_data.commit_count > 0){
+              if(userData.data[k].push_data && userData.data[k].push_data.commit_count && userData.data[k].push_data.commit_count > 0){
                 commit_count++;
               }
             }
@@ -132,7 +132,7 @@ async function getGitlabGroupsMembers(token, apiurl, groups) {
         var totalPages = data.headers['x-total-pages'];
 
         for(var k=2; k<=totalPages; k++){
-          data = await getDataFromGitlabAPI(apiurl+'/groups/'+groups[i].id+'/members&page='+k, config);
+          data = await getDataFromGitlabAPI(apiurl+'/groups/'+groups[i].id+'/members?page='+k, config);
           for(var j=0; j<data.data.length; j++){
             users.push({"id":data.data[j].id, "name": data.data[j].name, "username":data.data[j].username, "group":groups[i].name});
           }
