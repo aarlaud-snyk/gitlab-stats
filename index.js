@@ -47,21 +47,35 @@ const filterActiveMembers = (token, apiurl, filterActiveMembers) => {
         async ([key, value]) => {
           // console.log(value.id);
           // filteredMembersList.push(value.id)
-          let userData = await getDataFromGitlabAPI(apiurl+'/users/'+value.id+'/events?action=pushed&after='+cutOffDate, config);
-          let commit_count = 0;
-          for(var i=0; i<userData.data.length; i++){
-            if(userData.data[i].push_data && userData.data[i].push_data.commit_count && userData.data[i].push_data.commit_count > 0){
-              commit_count++;
-            }
+          var userData;
+          var commit_count = 0;
+          try {
+              userData = await getDataFromGitlabAPI(apiurl+'/users/'+value.id+'/events?action=pushed&after='+cutOffDate, config);
+              for(var i=0; i<userData.data.length; i++){
+                if(userData.data[i].push_data && userData.data[i].push_data.commit_count && userData.data[i].push_data.commit_count > 0){
+                  commit_count++;
+                }
+              }
+          } catch (err) {
+            console.error("Failed to get user "+value.id+ " push data. Skipping\n");
+            console.error(err);
           }
+
+
           var totalPages = userData.headers['x-total-pages'];
           for(var j=2; j<=totalPages; j++){
-            userData = await getDataFromGitlabAPI(apiurl+'/users/'+value.id+'/events?action=pushed&after='+cutOffDate+'&page='+j, config);
-            for(var k=0; k<userData.data.length; k++){
-              if(userData.data[k].push_data && userData.data[k].push_data.commit_count && userData.data[k].push_data.commit_count > 0){
-                commit_count++;
-              }
+            try {
+               userData = await getDataFromGitlabAPI(apiurl+'/users/'+value.id+'/events?action=pushed&after='+cutOffDate+'&page='+j, config);
+               for(var k=0; k<userData.data.length; k++){
+                 if(userData.data[k].push_data && userData.data[k].push_data.commit_count && userData.data[k].push_data.commit_count > 0){
+                   commit_count++;
+                 }
+               }
+            } catch (err) {
+              console.log(err);
+              console.error("Failed to get user "+value.id+ " push data. Skipping\n");
             }
+
           }
 
           if(commit_count > 0){
