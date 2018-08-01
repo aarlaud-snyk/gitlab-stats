@@ -333,7 +333,11 @@ program
         })
         .then((finalList) => {
           console.log(chalk.red(finalList.length + " users with at least 1 commits in the last "+ NBOFDAYS + " days"));
-          console.log(finalList);
+          for(var b=0;b<finalList.length;b++){
+            console.log(chalk.blue(finalList[b].name) + " with "+ finalList[b]['number of commits'] + ' commits in groups '+finalList[b]['groups']);
+          }
+          //console.log(finalList);
+          console.log(chalk.red("\nThank you and Stay secure !\n"));
         })
         .catch((error) => {
           console.error(error);
