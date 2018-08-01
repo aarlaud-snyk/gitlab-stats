@@ -17,8 +17,8 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^0.17.1",
-    "chalk": "^2.3.0",
-    "commander": "^2.12.2",
+    "chalk": "^2.4.1",
+    "commander": "^2.16.0",
     "figlet": "^1.2.0",
     "moment": "^2.22.2"
   }

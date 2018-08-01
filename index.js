@@ -11,6 +11,7 @@ const figlet = require('figlet');
 const axios = require('axios');
 const moment = require('moment');
 
+
 var cutOffDate;
 
 const authenticate = (options) => {
@@ -23,6 +24,9 @@ const calculateCutOffDate = () => {
   console.log(chalk.red("Counting commits only after "+cutOffDate));
 
 }
+
+
+
 const getDataFromGitlabAPI = (url, config) => {
   return new Promise((resolve,reject) => {
     axios.get(url, config)
@@ -32,7 +36,55 @@ const getDataFromGitlabAPI = (url, config) => {
     .catch((error) => {
       reject(error);
     });
+
   });
+}
+
+const getMemberEvents = async (apiurl,config,memberKey, member, filteredMembersList) => {
+  // console.log(value.id);
+  // filteredMembersList.push(value.id)
+  console.log('checking if '+memberKey + ' which ID='+member.id + ' has been active in last '+NBOFDAYS+' days');
+  var userData;
+  var commit_count = 0;
+  try {
+
+      userData = await getDataFromGitlabAPI(apiurl+'/users/'+member.id+'/events?action=pushed&after='+cutOffDate, config);
+
+      for(var i=0; i<userData.data.length; i++){
+        if(userData.data[i].push_data && userData.data[i].push_data.commit_count && userData.data[i].push_data.commit_count > 0){
+          commit_count++;
+        }
+      }
+  } catch (err) {
+    console.error("Failed to get user "+member.id+ " push data. Skipping\n");
+    console.error(err);
+  }
+
+
+  var totalPages = userData.headers['x-total-pages'];
+  for(var j=2; j<=totalPages; j++){
+    try {
+
+       userData = await getDataFromGitlabAPI(apiurl+'/users/'+member.id+'/events?action=pushed&after='+cutOffDate+'&page='+j, config);
+
+       for(var k=0; k<userData.data.length; k++){
+         if(userData.data[k].push_data && userData.data[k].push_data.commit_count && userData.data[k].push_data.commit_count > 0){
+           commit_count++;
+         }
+       }
+    } catch (err) {
+      console.log(err);
+      console.error("Failed to get user "+member.id+ " push data at page "+j+". Skipping\n");
+    }
+
+  }
+
+  if(commit_count > 0){
+      filteredMembersList.push({"name": memberKey, "id": member.id, "username": member.username, "number of commits": commit_count, "groups": member.groups });
+  }
+
+
+
 }
 
 const filterActiveMembers = (token, apiurl, filterActiveMembers) => {
@@ -43,53 +95,82 @@ const filterActiveMembers = (token, apiurl, filterActiveMembers) => {
     filteredMembersList = [];
     var counter = 0;
 
-    Object.entries(filterActiveMembers).forEach(
-        async ([key, value]) => {
-          // console.log(value.id);
-          // filteredMembersList.push(value.id)
-          var userData;
-          var commit_count = 0;
-          try {
-              userData = await getDataFromGitlabAPI(apiurl+'/users/'+value.id+'/events?action=pushed&after='+cutOffDate, config);
-              for(var i=0; i<userData.data.length; i++){
-                if(userData.data[i].push_data && userData.data[i].push_data.commit_count && userData.data[i].push_data.commit_count > 0){
-                  commit_count++;
-                }
-              }
-          } catch (err) {
-            console.error("Failed to get user "+value.id+ " push data. Skipping\n");
-            console.error(err);
-          }
+    var extractionQueue = [];
+    console.log(chalk.blue("Filtering out inactive members of groups"));
+    for(var a=0; a<Object.keys(filterActiveMembers).length; a++){
 
 
-          var totalPages = userData.headers['x-total-pages'];
-          for(var j=2; j<=totalPages; j++){
-            try {
-               userData = await getDataFromGitlabAPI(apiurl+'/users/'+value.id+'/events?action=pushed&after='+cutOffDate+'&page='+j, config);
-               for(var k=0; k<userData.data.length; k++){
-                 if(userData.data[k].push_data && userData.data[k].push_data.commit_count && userData.data[k].push_data.commit_count > 0){
-                   commit_count++;
-                 }
-               }
-            } catch (err) {
-              console.log(err);
-              console.error("Failed to get user "+value.id+ " push data. Skipping\n");
-            }
+      let memberKey = Object.keys(filterActiveMembers)[a];
+//      console.log('queueing '+memberKey);
+      extractionQueue.push(() => getMemberEvents(apiurl,config,memberKey,filterActiveMembers[memberKey], filteredMembersList));
+//      console.log('done queueing '+ memberKey);
 
-          }
+    }
 
-          if(commit_count > 0){
-              filteredMembersList.push({"name": key, "id": value.id, "username": value.username, "number of commits": commit_count, "groups": value.groups });
-          }
+    var queueProcessing=setInterval(function(){
+      if(extractionQueue.length > 0){
+        extractionQueue[0]();
+        extractionQueue.shift();
+      }else{
+          clearInterval(queueProcessing);
+          resolve(filteredMembersList);
 
-          //checking if all users have been reviewed and resolving promise if so
-          counter++;
-          if(counter == Object.keys(filterActiveMembers).length){
-            resolve(filteredMembersList);
-          }
+      }
 
-        }
-    );
+    },INTER_CALLS_DELAY);
+
+    // Object.entries(filterActiveMembers).forEach(
+    //     async ([key, value]) => {
+    //       // console.log(value.id);
+    //       // filteredMembersList.push(value.id)
+    //       var userData;
+    //       var commit_count = 0;
+    //       try {
+    //         console.log('call '+counter);
+    //           userData = await getDataFromGitlabAPI(apiurl+'/users/'+value.id+'/events?action=pushed&after='+cutOffDate, config);
+    //           console.log('done call '+counter);
+    //           for(var i=0; i<userData.data.length; i++){
+    //             if(userData.data[i].push_data && userData.data[i].push_data.commit_count && userData.data[i].push_data.commit_count > 0){
+    //               commit_count++;
+    //             }
+    //           }
+    //       } catch (err) {
+    //         console.error("Failed to get user "+value.id+ " push data. Skipping\n");
+    //         console.error(err);
+    //       }
+    //
+    //
+    //       var totalPages = userData.headers['x-total-pages'];
+    //       for(var j=2; j<=totalPages; j++){
+    //         try {
+    //           console.log('call extra pages'+counter);
+    //            userData = await getDataFromGitlabAPI(apiurl+'/users/'+value.id+'/events?action=pushed&after='+cutOffDate+'&page='+j, config);
+    //            console.log('done call extra pages'+counter);
+    //            for(var k=0; k<userData.data.length; k++){
+    //              if(userData.data[k].push_data && userData.data[k].push_data.commit_count && userData.data[k].push_data.commit_count > 0){
+    //                commit_count++;
+    //              }
+    //            }
+    //         } catch (err) {
+    //           console.log(err);
+    //           console.error("Failed to get user "+value.id+ " push data. Skipping\n");
+    //         }
+    //
+    //       }
+    //
+    //       if(commit_count > 0){
+    //           filteredMembersList.push({"name": key, "id": value.id, "username": value.username, "number of commits": commit_count, "groups": value.groups });
+    //       }
+    //
+    //       //checking if all users have been reviewed and resolving promise if so
+    //       counter++;
+    //       if(counter == Object.keys(filterActiveMembers).length){
+    //         resolve(filteredMembersList);
+    //       }
+    //
+    //     }
+    // );
+
 
   });
 
