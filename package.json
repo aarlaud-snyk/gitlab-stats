@@ -4,7 +4,9 @@
   "description": "Snyk CLI tool to extract number of active contributors on a Gitlab instance.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "snyk-protect": "snyk protect",
+    "prepare": "npm run snyk-protect"
   },
   "keywords": [
     "gitlab",
@@ -20,6 +22,8 @@
     "chalk": "^2.4.1",
     "commander": "^2.16.0",
     "figlet": "^1.2.0",
-    "moment": "^2.22.2"
-  }
+    "moment": "^2.22.2",
+    "snyk": "^1.161.1"
+  },
+  "snyk": true
 }
