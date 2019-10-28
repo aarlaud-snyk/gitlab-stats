@@ -1,0 +1,13 @@
+version: 2.1
+
+orbs:
+  snyk: snyk/snyk@0.0.3
+
+jobs:
+    build:
+      docker:
+        - image: circleci/node:latest
+      steps:
+        - checkout
+        - run: npm install
+        - snyk/scan
