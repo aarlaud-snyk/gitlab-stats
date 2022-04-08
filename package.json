@@ -20,7 +20,7 @@
     "chalk": "^2.4.1",
     "commander": "^2.16.0",
     "figlet": "^1.2.0",
-    "moment": "^2.22.2"
+    "moment": "^2.29.2"
   },
   "devDependencies": {
     "snyk": "^1.239.1"
