@@ -23,6 +23,6 @@
     "moment": "^2.22.2"
   },
   "devDependencies": {
-    "snyk": "^1.239.1"
+    "snyk": "^1.1024.0"
   }
 }
