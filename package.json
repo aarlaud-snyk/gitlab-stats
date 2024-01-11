@@ -16,7 +16,7 @@
   "author": "antoine@snyk.io",
   "license": "ISC",
   "dependencies": {
-    "axios": "^0.18.1",
+    "axios": "^1.6.5",
     "chalk": "^2.4.1",
     "commander": "^2.16.0",
     "figlet": "^1.2.0",
